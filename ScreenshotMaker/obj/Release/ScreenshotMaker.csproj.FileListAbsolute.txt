@@ -1,0 +1,10 @@
+C:\Users\maksym_rutskyi\source\repos\ScreenshotMaker\ScreenshotMaker\bin\Release\Chromedriver\chromedriver.exe
+C:\Users\maksym_rutskyi\source\repos\ScreenshotMaker\ScreenshotMaker\bin\Release\ScreenshotMaker.exe.config
+C:\Users\maksym_rutskyi\source\repos\ScreenshotMaker\ScreenshotMaker\bin\Release\ScreenshotMaker.exe
+C:\Users\maksym_rutskyi\source\repos\ScreenshotMaker\ScreenshotMaker\bin\Release\ScreenshotMaker.pdb
+C:\Users\maksym_rutskyi\source\repos\ScreenshotMaker\ScreenshotMaker\bin\Release\WebDriver.dll
+C:\Users\maksym_rutskyi\source\repos\ScreenshotMaker\ScreenshotMaker\bin\Release\WebDriver.xml
+C:\Users\maksym_rutskyi\source\repos\ScreenshotMaker\ScreenshotMaker\obj\Release\ScreenshotMaker.csproj.CoreCompileInputs.cache
+C:\Users\maksym_rutskyi\source\repos\ScreenshotMaker\ScreenshotMaker\obj\Release\ScreenshotMaker.csproj.CopyComplete
+C:\Users\maksym_rutskyi\source\repos\ScreenshotMaker\ScreenshotMaker\obj\Release\ScreenshotMaker.exe
+C:\Users\maksym_rutskyi\source\repos\ScreenshotMaker\ScreenshotMaker\obj\Release\ScreenshotMaker.pdb
