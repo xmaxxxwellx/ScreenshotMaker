@@ -3,23 +3,61 @@ using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Configuration;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ScreenshotMaker
 {
     class Program
     {
-        private const string ChromedriverPath = "Chromedriver";
-        private const string FileWithUrlsList = "PagesToAnalyse.txt";
-        private const string DirectoryForScreenshots = "Screenshots";
+        private static readonly ThreadLocal<ChromeDriver> Driver = new ThreadLocal<ChromeDriver>( true );
 
-        static void Main( string[] args )
+        private static List<string> _urlList;
+        private static NameValueCollection _applicationSettings;
+
+        private static void Main( string[] args )
         {
-            //Parse the list of urls from the file
-            var urlsList = File.ReadAllLines( FileWithUrlsList ).ToList();
+            //Get settings from .config file
+            _applicationSettings = ConfigurationManager.GetSection( "ApplicationSettings" ) as NameValueCollection;
 
-            //Create an instance of webdriver with needed options
+            //Parse the list of urls from the file
+            _urlList = File.ReadAllLines( _applicationSettings?["DataSource"] ?? throw new InvalidOperationException() ).ToList();
+
+            //Take screenshots according the urls list in parallel
+            Parallel.ForEach( _urlList,
+                new ParallelOptions { MaxDegreeOfParallelism = Convert.ToInt16( _applicationSettings["MaxThreadCount"] ) },
+                GoToPageAndTakeScreenshot );
+
+            CloseChromeDrivers();
+
+            Console.WriteLine( "Work is done. Press any key to EXIT..." );
+            Console.ReadKey();
+        }
+
+        private static void GoToPageAndTakeScreenshot( string url )
+        {
+            StartChromeDriver();
+
+            if (string.IsNullOrWhiteSpace( url ))
+                return;
+
+            Console.WriteLine( $"------------ Opening \"{url}\" in thread {Task.CurrentId} ------------" );
+
+            Driver.Value.Navigate().GoToUrl( url.Trim() );
+
+            //Wait the page to be completely loaded
+            new WebDriverWait( Driver.Value, TimeSpan.FromSeconds( 30 ) )
+                .Until( wd => ((IJavaScriptExecutor)wd).ExecuteScript( "return document.readyState" ).ToString().Equals( "complete" ) );
+
+            TakeFullPageScreenshot( Driver.Value, url );
+        }
+
+        private static ChromeOptions InitOptions()
+        {
             var options = new ChromeOptions();
             options.AddArgument( "window-size=1920,1080" );
             options.AddArguments( "headless" );
@@ -27,30 +65,24 @@ namespace ScreenshotMaker
             options.AddArgument( "--disable-gpu" );
             options.AddArgument( "--log-level=3" );
 
-            var driver = new ChromeDriver( ChromedriverPath, options );
-            driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds( 3 );
+            return options;
+        }
 
-            foreach (var url in urlsList)
+        private static void StartChromeDriver()
+        {
+            if (!Driver.IsValueCreated)
             {
-                if (!string.IsNullOrWhiteSpace( url ))
-                {
-                    Console.WriteLine( $"------------ Opening \"{url}\" ------------" );
-
-                    driver.Navigate().GoToUrl( url.Trim() );
-
-                    //Wait the page to be completely loaded
-                    new WebDriverWait( driver, TimeSpan.FromSeconds( 30 ) )
-                        .Until( wd => ((IJavaScriptExecutor)wd).ExecuteScript( "return document.readyState" ).ToString().Equals( "complete" ) );
-
-                    TakeFullPageScreenshot( driver, url );
-                }
+                Driver.Value = new ChromeDriver( _applicationSettings["ChromedriverPath"], InitOptions() );
+                Driver.Value.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds( 3 );
             }
+        }
 
-            driver.Close();
-            driver.Quit();
-
-            Console.WriteLine( "Work is done. Press any key to EXIT..." );
-            Console.ReadKey();
+        private static void CloseChromeDrivers()
+        {
+            foreach (var driver in Driver.Values)
+            {
+                driver.Quit();
+            }
         }
 
         private static void TakeFullPageScreenshot( ChromeDriver driver, string url )
@@ -76,12 +108,12 @@ namespace ScreenshotMaker
             //Then just take screenshot as driver thinks that everything is visible
             var screenshot = driver.GetScreenshot();
 
-            Console.WriteLine( $"------------ Screenshot for \"{url}\" has been taken ------------" );
+            Console.WriteLine( $"------------ Screenshot for \"{url}\" has been taken in thread {Task.CurrentId} ------------" );
 
             //Save the screenshot
-            screenshot.SaveAsFile( Path.Combine( CreateDirectory( DirectoryForScreenshots ), $"{name}.jpg" ) );
+            screenshot.SaveAsFile( Path.Combine( CreateDirectory( _applicationSettings["DirectoryForScreenshots"] ), $"{name}.jpg" ) );
 
-            Console.WriteLine( $"------------ Screenshot for \"{url}\" has been saved ------------" );
+            Console.WriteLine( $"------------ Screenshot for \"{url}\" has been saved in thread {Task.CurrentId} ------------" );
 
             //This command will return browser back to a normal, usable form if need to do anything else with it.
             driver.ExecuteChromeCommand( "Emulation.clearDeviceMetricsOverride", new Dictionary<string, object>() );
